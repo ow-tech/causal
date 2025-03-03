@@ -1,10 +1,10 @@
 // src/components/FormulaInput.tsx
 import React, { useState, useRef, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { useFormulaStore } from "../stores/formulaStore";
 import TagItem from "./TagItem";
 import Autocomplete from "./Autocomplete";
 import { getSuggestions } from "../services/api";
+import { useQuery } from "@tanstack/react-query";
 
 // Types
 export interface Tag {
@@ -32,6 +32,12 @@ const FormulaInput: React.FC = () => {
   const [cursorIndex, setCursorIndex] = useState(tags.length);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [cursorIndex]);
+
   const { data: suggestions = [], isLoading } = useQuery({
     queryKey: ["suggestions", inputValue],
     queryFn: () => getSuggestions(inputValue),
@@ -44,12 +50,6 @@ const FormulaInput: React.FC = () => {
     setShowAutocomplete(
       e.target.value.length > 0 && !OPERATORS.includes(e.target.value)
     );
-  };
-
-  const handleInsertTag = (index: number, newTag: Tag) => {
-    insertTagAt(index, newTag);
-    setCursorIndex(index + 1);
-    setInputValue("");
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -102,6 +102,12 @@ const FormulaInput: React.FC = () => {
     }
   };
 
+  const handleInsertTag = (index: number, newTag: Tag) => {
+    insertTagAt(index, newTag);
+    setCursorIndex(index + 1);
+    setInputValue("");
+  };
+
   const handleSelectSuggestion = (suggestion: Suggestion) => {
     handleInsertTag(cursorIndex, {
       id: suggestion.id,
@@ -112,38 +118,54 @@ const FormulaInput: React.FC = () => {
     });
   };
 
+  const handleContainerClick = (index: number) => {
+    setCursorIndex(index);
+    inputRef.current?.focus();
+  };
+
   useEffect(() => {
     calculateFormula();
   }, [tags, calculateFormula]);
-
-  const handleContainerClick = () => {
-    inputRef.current?.focus();
-  };
 
   return (
     <div className="relative">
       <div
         className="flex flex-wrap items-center p-2 border rounded-md bg-white min-h-10 focus-within:ring-2 focus-within:ring-blue-500"
-        onClick={handleContainerClick}
       >
         {tags.map((tag, index) => (
-          <TagItem
-            key={tag.id}
-            tag={tag}
-            onRemove={() => removeTag(tag.id)}
-            onUpdate={(updatedTag) => updateTag(tag.id, updatedTag)}
-          />
+          <React.Fragment key={tag.id}>
+            {cursorIndex === index && (
+              <input
+                ref={inputRef}
+                type="text"
+                value={inputValue}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                className="outline-none px-1 min-w-20"
+              />
+            )}
+            <TagItem
+              tag={tag}
+              onRemove={() => removeTag(tag.id)}
+              onUpdate={(updatedTag) => updateTag(tag.id, updatedTag)}
+              onClick={() => handleContainerClick(index + 1)}
+            />
+          </React.Fragment>
         ))}
-        <input
-          ref={inputRef}
-          type="text"
-          value={inputValue}
-          onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
-          className="flex-grow outline-none px-1 min-w-20"
-          placeholder={tags.length === 0 ? "Enter formula..." : ""}
-        />
+
+        {cursorIndex === tags.length && (
+          <input
+            ref={inputRef}
+            type="text"
+            value={inputValue}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            className="outline-none px-1 min-w-20"
+            placeholder={tags.length === 0 ? "Enter formula..." : ""}
+          />
+        )}
       </div>
+
       {showAutocomplete && suggestions.length > 0 && (
         <Autocomplete
           suggestions={suggestions}
@@ -151,6 +173,7 @@ const FormulaInput: React.FC = () => {
           onSelect={handleSelectSuggestion}
         />
       )}
+
       {tags.length > 0 && (
         <div className="mt-4 p-2 bg-gray-100 rounded-md">
           <div className="font-bold">Formula Result:</div>

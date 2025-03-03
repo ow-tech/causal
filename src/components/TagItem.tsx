@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Tag, Suggestion } from "./FormulaInput";
@@ -7,6 +8,7 @@ interface TagItemProps {
   tag: Tag;
   onRemove: () => void;
   onUpdate: (updatedTag: Tag) => void;
+  onClick?: () => void;
 }
 
 const TagItem: React.FC<TagItemProps> = ({ tag, onRemove, onUpdate }) => {
